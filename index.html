@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 Temp & Humidity Monitor</title>
+</head>
+<body>
+<h1>ESP32 Temperature & Humidity</h1>
+<p id="temp">Loading...</p>
+<p id="hum">Loading...</p>
+
+<script>
+// Supabase table endpoint (replace with your project info)
+const url = "https://qzmsxpuefsfkiebcocmq.supabase.co/rest/v1/readings";
+const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6bXN4cHVlZnNma2llYmNvY21xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MzI0NTAsImV4cCI6MjA4OTQwODQ1MH0.qwU_C-rVhPusL88r50rixugIi5ljppYFdg8xehv75CQ";
+
+// Function to get latest data
+async function getData() {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "apikey": apiKey,
+        "Authorization": "Bearer " + apiKey
+      }
+    });
+    const data = await res.json();
+    
+    // Update HTML
+    document.getElementById("temp").innerText = "Temperature: " + data[0].temperature + " °C";
+    document.getElementById("hum").innerText = "Humidity: " + data[0].humidity + " %";
+  } catch (err) {
+    console.error("Error fetching data:", err);
+  }
+}
+
+// Refresh every 3 seconds
+setInterval(getData, 3000);
+</script>
+</body>
+</html>
