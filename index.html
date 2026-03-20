@@ -9,11 +9,9 @@
 <p id="hum">Loading...</p>
 
 <script>
-// Supabase table endpoint (replace with your project info)
-const url = "https://qzmsxpuefsfkiebcocmq.supabase.co/rest/v1/readings";
+const url = "https://qzmsxpuefsfkiebcocmq.supabase.co/rest/v1/readings?select=*&order=created_at.desc&limit=1";
 const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6bXN4cHVlZnNma2llYmNvY21xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MzI0NTAsImV4cCI6MjA4OTQwODQ1MH0.qwU_C-rVhPusL88r50rixugIi5ljppYFdg8xehv75CQ";
 
-// Function to get latest data
 async function getData() {
   try {
     const res = await fetch(url, {
@@ -22,18 +20,24 @@ async function getData() {
         "Authorization": "Bearer " + apiKey
       }
     });
+
     const data = await res.json();
-    
-    // Update HTML
-    document.getElementById("temp").innerText = "Temperature: " + data[0].temperature + " °C";
-    document.getElementById("hum").innerText = "Humidity: " + data[0].humidity + " %";
+
+    if (data.length > 0) {
+      document.getElementById("temp").innerText =
+        "Temperature: " + data[0].temperature + " °C";
+
+      document.getElementById("hum").innerText =
+        "Humidity: " + data[0].humidity + " %";
+    }
+
   } catch (err) {
-    console.error("Error fetching data:", err);
+    console.error(err);
   }
 }
 
-// Refresh every 3 seconds
 setInterval(getData, 3000);
+getData();
 </script>
 </body>
 </html>
