@@ -21,8 +21,9 @@ async function getData() {
       }
     });
 
-    const data = await res.json();
-
+   const data = await res.json();
+   console.log(data); 
+   
     if (data.length > 0) {
       document.getElementById("temp").innerText =
         "Temperature: " + data[0].temperature + " °C";
