@@ -1,604 +1,286 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Climate Monitor Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IoT Sensor Dashboard</title>
 
-    :root {
-      --bg:      #0f1923;
-      --surface: #162130;
-      --border:  #1e3248;
-      --temp:    #f97316;
-      --hum:     #2dd4bf;
-      --text:    #e2e8f0;
-      --muted:   #64748b;
-      --good:    #4ade80;
-    }
+  <!-- Fonts: Plus Jakarta Sans (UI) + IBM Plex Mono (data) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
 
-    html, body {
-      width: 100%; height: 100%;
-    }
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      padding: 1.5rem 2rem;
-      gap: 1.25rem;
-      overflow: hidden;
-    }
+  <!-- Chart.js + date adapter -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
-    /* ── Header ── */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
-    .header-left h1 {
-      font-size: clamp(1.1rem, 2vw, 1.5rem);
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #fff;
-    }
-
-    .header-left p {
-      font-size: clamp(0.62rem, 1vw, 0.72rem);
-      color: var(--muted);
-      margin-top: 0.2rem;
-      letter-spacing: 0.03em;
-    }
-
-    .live-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: rgba(74,222,128,0.1);
-      border: 1px solid rgba(74,222,128,0.25);
-      color: var(--good);
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 0.35rem 0.85rem;
-      border-radius: 999px;
-    }
-
-    .live-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--good);
-      animation: blink 2s ease-in-out infinite;
-    }
-
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
-
-    /* ── Metric Cards ── */
-    .metric-cards {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.25rem;
-      flex-shrink: 0;
-    }
-
-    .metric-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 1.75rem 2rem;
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-    }
-
-    .metric-icon-wrap {
-      width: 84px; height: 84px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .metric-icon-wrap.temp { background: var(--temp); }
-    .metric-icon-wrap.hum  { background: var(--hum);  }
-
-    .metric-icon-wrap svg {
-      color: #fff;
-      width: 38px; height: 38px;
-    }
-
-    .metric-info { flex: 1; min-width: 0; }
-
-    .metric-label {
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 0.4rem;
-    }
-
-    .metric-value {
-      font-size: clamp(2.4rem, 4vw, 3.4rem);
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -0.03em;
-      line-height: 1;
-    }
-
-    .metric-status {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      margin-top: 0.55rem;
-    }
-
-    .metric-status-text {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--good);
-    }
-
-    .metric-range {
-      font-size: 0.68rem;
-      color: var(--muted);
-      margin-top: 0.25rem;
-    }
-
-    .metric-sparkline {
-      height: 40px;
-      width: 120px;
-      flex-shrink: 0;
-    }
-
-    /* ── Chart Section ── */
-    .chart-section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 1.5rem 2rem;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-
-    .chart-section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-      flex-shrink: 0;
-    }
-
-    .chart-section-title {
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .chart-legend {
-      display: flex;
-      gap: 1.5rem;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      font-size: 0.7rem;
-      color: var(--muted);
-    }
-
-    .legend-line {
-      width: 22px; height: 2.5px;
-      border-radius: 999px;
-    }
-
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-      flex: 1;
-      min-height: 0;
-    }
-
-    .chart-block {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .chart-axis-label {
-      font-size: 0.62rem;
-      color: var(--muted);
-      margin-bottom: 0.5rem;
-      flex-shrink: 0;
-    }
-
-    .chart-svg-wrap {
-      flex: 1;
-      min-height: 0;
-      position: relative;
-    }
-
-    .chart-svg-wrap svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* ── Status Bar ── */
-    .status-bar {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 1.25rem;
-      flex-shrink: 0;
-    }
-
-    .status-tile {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.1rem 1.5rem;
-    }
-
-    .status-tile-label {
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 0.5rem;
-    }
-
-    .status-tile-val {
-      font-size: 1.6rem;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -0.01em;
-      line-height: 1;
-    }
-
-    .status-tile-sub {
-      font-size: 0.68rem;
-      color: var(--muted);
-      margin-top: 0.35rem;
-      line-height: 1.6;
-    }
-
-    .status-tile-sub span { display: block; }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- Header -->
-  <div class="header">
-    <div class="header-left">
-      <h1>Climate Monitor Dashboard</h1>
-      <p>Unit: ESP32 · DHT11 &nbsp;|&nbsp; Cagayan de Oro City &nbsp;|&nbsp; <span id="header-time">—</span></p>
-    </div>
-    <div class="live-badge"><div class="live-dot"></div> Live</div>
-  </div>
-
-  <!-- Metric Cards -->
-  <div class="metric-cards">
-
-    <div class="metric-card">
-      <div class="metric-icon-wrap temp">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+  <!-- ════════════════════════════════════════════════
+       SIDEBAR
+  ════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar__logo">
+      <div class="sidebar__logo-mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor" opacity=".9"/>
+          <rect x="13" y="2" width="9" height="9" rx="2" fill="currentColor" opacity=".55"/>
+          <rect x="2" y="13" width="9" height="9" rx="2" fill="currentColor" opacity=".55"/>
+          <rect x="13" y="13" width="9" height="9" rx="2" fill="currentColor" opacity=".25"/>
         </svg>
       </div>
-      <div class="metric-info">
-        <div class="metric-label">Temperature</div>
-        <div class="metric-value" id="m-temp">--°C</div>
-        <div class="metric-status">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-          <span class="metric-status-text" id="m-temp-status">—</span>
+      <span class="sidebar__logo-text">SensorHub</span>
+    </div>
+
+    <nav class="sidebar__nav">
+      <span class="sidebar__section-label">Monitor</span>
+      <a class="sidebar__link sidebar__link--active" href="#">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Overview
+      </a>
+    </nav>
+
+    <div class="sidebar__device">
+      <div class="sidebar__device-dot" id="sidebarDot"></div>
+      <div class="sidebar__device-info">
+        <span class="sidebar__device-name">ESP32-Node-01</span>
+        <span class="sidebar__device-model">DHT11 Sensor</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════ -->
+  <div class="shell">
+
+    <!-- ── Topnav ──────────────────────────────────── -->
+    <header class="topnav">
+      <div class="topnav__left">
+        <button class="topnav__hamburger" id="hamburger" aria-label="Menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="topnav__breadcrumb">
+          <span class="topnav__bc-root">SensorHub</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          <span class="topnav__bc-page">Overview</span>
         </div>
-        <div class="metric-range" id="m-temp-range">—</div>
       </div>
-      <svg class="metric-sparkline" id="spark-temp" viewBox="0 0 120 40" preserveAspectRatio="none"></svg>
-    </div>
 
-    <div class="metric-card">
-      <div class="metric-icon-wrap hum">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-        </svg>
-      </div>
-      <div class="metric-info">
-        <div class="metric-label">Humidity</div>
-        <div class="metric-value" id="m-hum">--%</div>
-        <div class="metric-status">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-          <span class="metric-status-text" id="m-hum-status">—</span>
+      <div class="topnav__right">
+        <div class="live-chip" id="liveChip">
+          <span class="live-chip__pulse" id="liveChipPulse"></span>
+          <span class="live-chip__label" id="liveChipLabel">Connecting</span>
         </div>
-        <div class="metric-range" id="m-hum-range">—</div>
+        <div class="topnav__sync">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <span id="lastSync">—</span>
+        </div>
       </div>
-      <svg class="metric-sparkline" id="spark-hum" viewBox="0 0 120 40" preserveAspectRatio="none"></svg>
-    </div>
+    </header>
 
-  </div>
+    <!-- ── Page Body ───────────────────────────────── -->
+    <main class="content">
 
-  <!-- Historical Trends -->
-  <div class="chart-section">
-    <div class="chart-section-header">
-      <div class="chart-section-title">Historical Trends (Last 20 Readings)</div>
-      <div class="chart-legend">
-        <div class="legend-item"><div class="legend-line" style="background:var(--temp)"></div>Temperature (°C)</div>
-        <div class="legend-item"><div class="legend-line" style="background:var(--hum)"></div>Humidity (%)</div>
+      <!-- ── Page Title Row ───────────────────────── -->
+      <div class="page-title-row">
+        <div>
+          <h1 class="page-title">Environment Overview</h1>
+          <p class="page-desc">Real-time monitoring · ESP32 + DHT11 · Supabase</p>
+        </div>
+        <div class="page-title-row__actions">
+          <!-- Time range -->
+          <div class="range-tabs" id="timeRange">
+            <button class="rtab" data-range="1h">1H</button>
+            <button class="rtab rtab--on" data-range="6h">6H</button>
+            <button class="rtab" data-range="24h">24H</button>
+            <button class="rtab" data-range="7d">7D</button>
+          </div>
+          <button class="action-btn action-btn--secondary" id="btnClear">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+            Clear
+          </button>
+          <button class="action-btn action-btn--primary" id="btnRefresh">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Refresh
+          </button>
+          <button class="action-btn action-btn--outline" id="btnExport">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+        </div>
       </div>
-    </div>
-    <div class="charts-grid">
-      <div class="chart-block">
-        <div class="chart-axis-label">Temperature (°C)</div>
-        <div class="chart-svg-wrap"><svg id="chart-temp"></svg></div>
+
+      <!-- ── Alert banner ─────────────────────────── -->
+      <div class="alert-stripe" id="alertStripe" hidden>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="alertMsg">Alert</span>
+        <button class="alert-stripe__close" id="alertClose">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div class="chart-block">
-        <div class="chart-axis-label">Humidity (%)</div>
-        <div class="chart-svg-wrap"><svg id="chart-hum"></svg></div>
+
+      <!-- ── Metric Cards ─────────────────────────── -->
+      <div class="metric-grid">
+
+        <!-- Current Temperature -->
+        <div class="mcard mcard--blue">
+          <div class="mcard__top">
+            <div class="mcard__icon mcard__icon--blue">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+            </div>
+            <span class="mcard__label">Temperature</span>
+            <span class="mcard__pill mcard__pill--blue">Live</span>
+          </div>
+          <div class="mcard__value-row">
+            <span class="mcard__value" id="currTemp">—</span>
+            <span class="mcard__unit">°C</span>
+            <span class="mcard__trend" id="trendTemp"></span>
+          </div>
+          <div class="mcard__foot">
+            <span class="mcard__foot-label">vs previous reading</span>
+            <span class="mcard__foot-delta" id="deltaTemp">—</span>
+          </div>
+        </div>
+
+        <!-- Current Humidity -->
+        <div class="mcard mcard--teal">
+          <div class="mcard__top">
+            <div class="mcard__icon mcard__icon--teal">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            </div>
+            <span class="mcard__label">Humidity</span>
+            <span class="mcard__pill mcard__pill--teal">Live</span>
+          </div>
+          <div class="mcard__value-row">
+            <span class="mcard__value" id="currHum">—</span>
+            <span class="mcard__unit">%</span>
+            <span class="mcard__trend" id="trendHum"></span>
+          </div>
+          <div class="mcard__foot">
+            <span class="mcard__foot-label">vs previous reading</span>
+            <span class="mcard__foot-delta" id="deltaHum">—</span>
+          </div>
+        </div>
+
+        <!-- Avg Temperature -->
+        <div class="mcard mcard--neutral">
+          <div class="mcard__top">
+            <div class="mcard__icon mcard__icon--neutral">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <span class="mcard__label">Avg Temperature</span>
+            <span class="mcard__pill">Period</span>
+          </div>
+          <div class="mcard__value-row">
+            <span class="mcard__value" id="avgTemp">—</span>
+            <span class="mcard__unit">°C</span>
+          </div>
+          <div class="mcard__foot">
+            <span class="mcard__foot-label" id="tempMinMax">min / max: — / —</span>
+            <span class="mcard__foot-delta" id="tempReadingCount">— readings</span>
+          </div>
+        </div>
+
+        <!-- Avg Humidity -->
+        <div class="mcard mcard--neutral">
+          <div class="mcard__top">
+            <div class="mcard__icon mcard__icon--neutral">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <span class="mcard__label">Avg Humidity</span>
+            <span class="mcard__pill">Period</span>
+          </div>
+          <div class="mcard__value-row">
+            <span class="mcard__value" id="avgHum">—</span>
+            <span class="mcard__unit">%</span>
+          </div>
+          <div class="mcard__foot">
+            <span class="mcard__foot-label" id="humMinMax">min / max: — / —</span>
+            <span class="mcard__foot-delta" id="humReadingCount">— readings</span>
+          </div>
+        </div>
+
       </div>
-    </div>
-  </div>
 
-  <!-- Status Bar -->
-  <div class="status-bar">
-    <div class="status-tile">
-      <div class="status-tile-label">Status Summary</div>
-      <div class="status-tile-sub">
-        <span id="stat-climate">Climate: —</span>
-        <span>Sensor: DHT11 Active</span>
-        <span>Alerts: 0</span>
+      <!-- ── Chart Panel ──────────────────────────── -->
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__title-block">
+            <h2 class="panel__title">Trend Chart</h2>
+            <span class="panel__subtitle" id="chartSubtitle">Loading…</span>
+          </div>
+          <div class="chart-legend">
+            <button class="legend-btn legend-btn--temp legend-btn--on" id="togTemp" data-idx="0">
+              <span class="legend-swatch legend-swatch--temp"></span>
+              Temperature
+            </button>
+            <button class="legend-btn legend-btn--hum legend-btn--on" id="togHum" data-idx="1">
+              <span class="legend-swatch legend-swatch--hum"></span>
+              Humidity
+            </button>
+          </div>
+        </div>
+        <div class="panel__chart-body">
+          <canvas id="mainChart"></canvas>
+        </div>
       </div>
-    </div>
-    <div class="status-tile">
-      <div class="status-tile-label">System Uptime</div>
-      <div class="status-tile-val" id="stat-uptime">00h 00m</div>
-      <div class="status-tile-sub">ESP32 running</div>
-    </div>
-    <div class="status-tile">
-      <div class="status-tile-label">Last Updated</div>
-      <div class="status-tile-val" id="stat-updated">—</div>
-      <div class="status-tile-sub" id="stat-updated-abs">—</div>
-    </div>
-  </div>
 
-<script>
-  const SUPABASE_URL = "https://qzmsxpuefsfkiebcocmq.supabase.co";
-  const API_KEY      = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6bXN4cHVlZnNma2llYmNvY21xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MzI0NTAsImV4cCI6MjA4OTQwODQ1MH0.qwU_C-rVhPusL88r50rixugIi5ljppYFdg8xehv75CQ";
-  const HISTORY_URL  = `${SUPABASE_URL}/rest/v1/readings?select=temperature,humidity,created_at&order=created_at.desc&limit=20`;
-  const HEADERS      = { "apikey": API_KEY, "Authorization": "Bearer " + API_KEY };
-  const startTime    = Date.now();
+      <!-- ── Table Panel ──────────────────────────── -->
+      <div class="panel">
+        <div class="panel__head">
+          <div class="panel__title-block">
+            <h2 class="panel__title">Readings Log</h2>
+            <span class="panel__subtitle" id="tableSubtitle">All records</span>
+          </div>
+          <div class="panel__head-right">
+            <div class="search-field">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="searchInput" class="search-field__input" placeholder="Filter…" />
+            </div>
+          </div>
+        </div>
 
-  // Clock
-  function updateClock() {
-    const now = new Date();
-    document.getElementById("header-time").textContent =
-      now.toLocaleString([], { month:"short", day:"numeric", year:"numeric",
-        hour:"2-digit", minute:"2-digit" });
-  }
-  updateClock(); setInterval(updateClock, 1000);
+        <div class="table-wrap">
+          <table class="rtable" id="dataTable">
+            <thead>
+              <tr>
+                <th class="th-sort" data-col="timestamp">
+                  Timestamp
+                  <span class="th-sort__icon" data-col="timestamp"></span>
+                </th>
+                <th class="th-sort" data-col="temperature">
+                  Temp (°C)
+                  <span class="th-sort__icon" data-col="temperature"></span>
+                </th>
+                <th class="th-sort" data-col="humidity">
+                  Humidity (%)
+                  <span class="th-sort__icon" data-col="humidity"></span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr class="rtable__empty">
+                <td colspan="3">Waiting for data…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-  // Uptime
-  function formatUptime(ms) {
-    const s = Math.floor(ms/1000), m = Math.floor(s/60)%60,
-          h = Math.floor(s/3600)%24, d = Math.floor(s/86400);
-    if (d > 0) return `${d}d ${String(h).padStart(2,"0")}h ${String(m).padStart(2,"0")}m`;
-    return `${String(h).padStart(2,"0")}h ${String(m).padStart(2,"0")}m`;
-  }
-  setInterval(() => {
-    document.getElementById("stat-uptime").textContent = formatUptime(Date.now() - startTime);
-  }, 1000);
+        <div class="table-foot">
+          <span class="table-foot__count" id="tableCount">0 records</span>
+          <div class="pager" id="pager"></div>
+        </div>
+      </div>
 
-  // Relative time
-  let lastUpdatedDate = null;
-  function relativeTime(d) {
-    const diff = Math.floor((Date.now() - d.getTime()) / 1000);
-    if (diff < 10)  return "Just now";
-    if (diff < 60)  return diff + " sec ago";
-    if (diff < 120) return "1 min ago";
-    return Math.floor(diff/60) + " min ago";
-  }
-  setInterval(() => {
-    if (lastUpdatedDate)
-      document.getElementById("stat-updated").textContent = relativeTime(lastUpdatedDate);
-  }, 5000);
+    </main>
+  </div><!-- /shell -->
 
-  function tempStatus(t) {
-    if (t == null) return "—";
-    if (t < 18) return "Cold"; if (t < 24) return "Optimal";
-    if (t < 30) return "Warm"; return "Hot";
-  }
-  function humStatus(h) {
-    if (h == null) return "—";
-    if (h < 30) return "Dry"; if (h < 60) return "Good";
-    if (h < 75) return "Humid"; return "Very Humid";
-  }
-  function climateStatus(t, h) {
-    if (t == null || h == null) return "Climate: Unknown";
-    if (t >= 18 && t <= 30 && h >= 30 && h <= 75) return "Climate: Stable";
-    if (t > 30) return "Climate: Too Hot";
-    if (t < 18) return "Climate: Too Cold";
-    return "Climate: Monitor";
-  }
-
-  function drawSparkline(svgId, values, color) {
-    const svg = document.getElementById(svgId);
-    svg.innerHTML = "";
-    if (!values || values.length < 2) return;
-    const W = 120, H = 40;
-    const mn = Math.min(...values), mx = Math.max(...values), sp = mx - mn || 1;
-    const xOf = i => (i/(values.length-1))*W;
-    const yOf = v => H - 2 - ((v-mn)/sp)*(H-4);
-    const pts = values.map((v,i) => [xOf(i), yOf(v)]);
-
-    const defs = document.createElementNS("http://www.w3.org/2000/svg","defs");
-    defs.innerHTML = `<linearGradient id="sg-${svgId}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${color}" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
-    </linearGradient>`;
-    svg.appendChild(defs);
-
-    const aD = `M${pts[0][0]},${H} ${pts.map(p=>`L${p[0]},${p[1]}`).join(" ")} L${pts[pts.length-1][0]},${H} Z`;
-    const area = document.createElementNS("http://www.w3.org/2000/svg","path");
-    area.setAttribute("d", aD); area.setAttribute("fill", `url(#sg-${svgId})`);
-    svg.appendChild(area);
-
-    const line = document.createElementNS("http://www.w3.org/2000/svg","polyline");
-    line.setAttribute("points", pts.map(p=>p.join(",")).join(" "));
-    line.setAttribute("fill","none"); line.setAttribute("stroke", color);
-    line.setAttribute("stroke-width","2"); line.setAttribute("stroke-linecap","round");
-    svg.appendChild(line);
-  }
-
-  function drawChart(svgId, values, color) {
-    const svg  = document.getElementById(svgId);
-    const wrap = svg.parentElement;
-    const W    = wrap.clientWidth  || 400;
-    const H    = wrap.clientHeight || 160;
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svg.innerHTML = "";
-
-    if (!values || values.length < 2) {
-      const t = document.createElementNS("http://www.w3.org/2000/svg","text");
-      t.setAttribute("x", W/2); t.setAttribute("y", H/2);
-      t.setAttribute("text-anchor","middle"); t.setAttribute("fill","#334155");
-      t.setAttribute("font-size","12"); t.setAttribute("font-family","Inter, sans-serif");
-      t.textContent = "Collecting data…";
-      svg.appendChild(t); return;
-    }
-
-    const pad = { top:12, right:10, bottom:24, left:38 };
-    const iW  = W - pad.left - pad.right;
-    const iH  = H - pad.top  - pad.bottom;
-    const mn  = Math.min(...values), mx = Math.max(...values);
-    const nMn = Math.floor(mn - 1), nMx = Math.ceil(mx + 1), sp = nMx - nMn || 1;
-    const xOf = i => pad.left + (i/(values.length-1))*iW;
-    const yOf = v => pad.top  + iH - ((v-nMn)/sp)*iH;
-
-    // Grid + Y labels
-    const steps = 4;
-    for (let i = 0; i <= steps; i++) {
-      const val = nMn + (sp/steps)*i;
-      const y   = yOf(val);
-      const gl  = document.createElementNS("http://www.w3.org/2000/svg","line");
-      gl.setAttribute("x1", pad.left); gl.setAttribute("x2", W - pad.right);
-      gl.setAttribute("y1", y); gl.setAttribute("y2", y);
-      gl.setAttribute("stroke","#1e3248"); gl.setAttribute("stroke-width","1");
-      svg.appendChild(gl);
-
-      const lbl = document.createElementNS("http://www.w3.org/2000/svg","text");
-      lbl.setAttribute("x", pad.left - 6); lbl.setAttribute("y", y + 4);
-      lbl.setAttribute("text-anchor","end"); lbl.setAttribute("fill","#475569");
-      lbl.setAttribute("font-size","9"); lbl.setAttribute("font-family","Inter, sans-serif");
-      lbl.textContent = Math.round(val);
-      svg.appendChild(lbl);
-    }
-
-    const pts = values.map((v,i) => [xOf(i), yOf(v)]);
-
-    // Gradient area
-    const defs = document.createElementNS("http://www.w3.org/2000/svg","defs");
-    const gId  = "g-" + svgId;
-    defs.innerHTML = `<linearGradient id="${gId}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${color}" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
-    </linearGradient>`;
-    svg.appendChild(defs);
-
-    const aD   = `M${pts[0][0]},${pad.top+iH} ${pts.map(p=>`L${p[0]},${p[1]}`).join(" ")} L${pts[pts.length-1][0]},${pad.top+iH} Z`;
-    const area = document.createElementNS("http://www.w3.org/2000/svg","path");
-    area.setAttribute("d", aD); area.setAttribute("fill", `url(#${gId})`);
-    svg.appendChild(area);
-
-    const line = document.createElementNS("http://www.w3.org/2000/svg","polyline");
-    line.setAttribute("points", pts.map(p=>p.join(",")).join(" "));
-    line.setAttribute("fill","none"); line.setAttribute("stroke", color);
-    line.setAttribute("stroke-width","2"); line.setAttribute("stroke-linecap","round");
-    line.setAttribute("stroke-linejoin","round");
-    svg.appendChild(line);
-
-    // Latest dot
-    const last = pts[pts.length-1];
-    const dot  = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    dot.setAttribute("cx", last[0]); dot.setAttribute("cy", last[1]);
-    dot.setAttribute("r","4"); dot.setAttribute("fill", color);
-    svg.appendChild(dot);
-
-    // X-axis time labels (first, middle, last)
-    const indices = [0, Math.floor((values.length-1)/2), values.length-1];
-    indices.forEach(idx => {
-      const x = xOf(idx);
-      const tl = document.createElementNS("http://www.w3.org/2000/svg","text");
-      tl.setAttribute("x", x); tl.setAttribute("y", H - 6);
-      tl.setAttribute("text-anchor","middle"); tl.setAttribute("fill","#475569");
-      tl.setAttribute("font-size","8"); tl.setAttribute("font-family","Inter, sans-serif");
-      tl.textContent = idx === 0 ? "oldest" : idx === values.length-1 ? "latest" : "mid";
-      svg.appendChild(tl);
-    });
-  }
-
-  async function getData() {
-    try {
-      const res  = await fetch(HISTORY_URL, { headers: HEADERS });
-      if (!res.ok) throw new Error(res.status);
-      const data = await res.json();
-      if (!data.length) return;
-
-      const sorted = [...data].reverse();
-      const temps  = sorted.map(r => r.temperature).filter(v => v != null);
-      const hums   = sorted.map(r => r.humidity).filter(v => v != null);
-      const latest = data[0];
-      const temp   = latest.temperature ?? null;
-      const hum    = latest.humidity    ?? null;
-
-      // Metric cards
-      document.getElementById("m-temp").textContent = temp !== null ? `${temp.toFixed(1)}°C` : "--°C";
-      document.getElementById("m-hum").textContent  = hum  !== null ? `${hum.toFixed(1)}%`   : "--%";
-      document.getElementById("m-temp-status").textContent = tempStatus(temp);
-      document.getElementById("m-hum-status").textContent  = humStatus(hum);
-
-      if (temps.length >= 2) {
-        const lo = Math.min(...temps).toFixed(1), hi = Math.max(...temps).toFixed(1);
-        document.getElementById("m-temp-range").textContent = `${lo}°C – ${hi}°C`;
-      }
-      if (hums.length >= 2) {
-        const lo = Math.min(...hums).toFixed(0), hi = Math.max(...hums).toFixed(0);
-        document.getElementById("m-hum-range").textContent = `${lo}% – ${hi}%`;
-      }
-
-      drawSparkline("spark-temp", temps, "#f97316");
-      drawSparkline("spark-hum",  hums,  "#2dd4bf");
-      drawChart("chart-temp", temps, "#f97316");
-      drawChart("chart-hum",  hums,  "#2dd4bf");
-
-      document.getElementById("stat-climate").textContent = climateStatus(temp, hum);
-
-      if (latest.created_at) {
-        lastUpdatedDate = new Date(latest.created_at);
-        document.getElementById("stat-updated").textContent    = relativeTime(lastUpdatedDate);
-        document.getElementById("stat-updated-abs").textContent =
-          lastUpdatedDate.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-      }
-    } catch(err) { console.error(err); }
-  }
-
-  getData();
-  setInterval(getData, 3000);
-  window.addEventListener("resize", getData);
-</script>
+  <script src="script.js"></script>
 </body>
 </html>
