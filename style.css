@@ -696,7 +696,6 @@ input  { font-family: inherit; }
 .search-field__input::placeholder { color: var(--ink-3); }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-
 /* Medium screens */
 @media (max-width: 1100px) {
   .metric-grid {
